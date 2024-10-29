@@ -1,8 +1,9 @@
 import numpy as np
-import cv2  # OpenCV
+import cv2  
 import os
 import argparse
 from matplotlib import pyplot as plt
+import pandas as pd
 
 def load_image(path):
     return cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2RGB)
@@ -39,24 +40,20 @@ def getToadAndBoo(img, hsv):
     upper_white = np.array([180, 50, 255])
     mask_white = cv2.inRange(hsv, lower_white, upper_white)
 
-    kernel = np.ones((3, 3), np.uint8)
-    mask_white = cv2.dilate(mask_white, kernel, iterations=2)
-    mask_white = cv2.erode(mask_white, kernel, iterations=1)
-
-    display_image(mask_white)
+    #display_image(mask_white)
 
     contours, _ = cv2.findContours(mask_white, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     contours_barcode = []
 
     for contour in contours:
         center, size, angle = cv2.minAreaRect(contour)
-        height, width = size
-        if width > 30 and width < 100 and height >40 and height < 200:
+        width, height = size
+        if width > 23 and width < 90 and height >35 and height < 100:
             contours_barcode.append(contour)
     
     print(len(contours_barcode))
     cv2.drawContours(img, contours_barcode, -1, (255,0,0), 1)
-    #display_image(img)
+    display_image(img)
     
 
 def getBlackBobomb(hsv):
@@ -96,12 +93,28 @@ def removeBackground(img, hsv):
 
     mask = cv2.inRange(hsv, lower_green, upper_green)
     mask_inv = cv2.bitwise_not(mask)
-    mask_inv[610:, :] = 0
+    mask_inv[620:, :] = 0
     mask_inv[0:150, :] = 0
 
     result = cv2.bitwise_and(img, img, mask=mask_inv)
+
+    kernel = np.ones((3, 3), np.uint8)
+    result = cv2.erode(result, kernel)
     #display_image(result)
     return result
+
+def calculate_mae(predicted_counts, true_counts):
+    errors = np.abs(np.array(predicted_counts) - np.array(true_counts))
+    print(true_counts)
+    print(predicted_counts)
+    print(errors)
+    mae = np.mean(errors)
+    return mae
+
+def read_true_counts(csv_path):
+    df = pd.read_csv(csv_path)
+    true_counts = {os.path.splitext(filename)[0]: count for filename, count in zip(df['picture'], df['toad_boo_bobomb'])}
+    return true_counts
 
 
 
@@ -118,7 +131,7 @@ def process_image(image_path):
     hsv_without_background = cv2.cvtColor(img_without_background, cv2.COLOR_BGR2HSV)
     #display_image(hsv_without_background)
 
-    getToadAndBoo(img, hsv_without_background)
+    #getToadAndBoo(img, hsv_without_background)
     # contours, _ = cv2.findContours(mask_inv, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     # contours_barcode = []
 
@@ -135,16 +148,29 @@ def process_image(image_path):
     # cv2.drawContours(img, contours_barcode, -1, (255,0,0), 1)
     #display_image(img)
 
+    return 1
 
 if __name__ == "__main__":
-    # Parse arguments
     parser = argparse.ArgumentParser(description='Process images from a dataset folder.')
     parser.add_argument('dataset_folder', type=str, help='Path to the folder containing the dataset images')
     args = parser.parse_args()
 
-    # Loop through the dataset folder and process each image
+    csv_path = os.path.join(args.dataset_folder, "object_count.csv")
+    true_counts = read_true_counts(csv_path)
+
+    detected_counts = []
+    true_counts_list = []
+
     for filename in os.listdir(args.dataset_folder):
         if filename.endswith(".jpg") or filename.endswith(".png"):
+            print(filename)
             image_path = os.path.join(args.dataset_folder, filename)
             print(f"Processing {image_path}")
-            process_image(image_path)
+            detected_count = process_image(image_path)
+            detected_counts.append(detected_count)
+            base_name = os.path.splitext(filename)[0]
+            true_count = true_counts.get(base_name, 0)
+            true_counts_list.append(true_count)
+    
+    mae = calculate_mae(detected_counts, true_counts_list)
+    print(f"Mean Absolute Error (MAE): {mae}")
