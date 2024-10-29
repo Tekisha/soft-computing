@@ -1,0 +1,68 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+env/
+.venv/
+my_env/
+
+# Jupyter Notebooks checkpoints
+.ipynb_checkpoints
+
+# Python specific
+*.pkl
+*.h5
+*.hdf5
+*.db
+*.sqlite3
+*.egg
+*.egg-info/
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# Logs and temporary files
+*.log
+*.out
+*.tmp
+*.bak
+
+# Compiled C/C++ files
+*.o
+*.so
+
+# CSV files, datasets, and other large files
+*.csv
+*.tsv
+*.dat
+*.npz
+*.npz
+*.npy
+
+# Images and videos (common in image processing projects)
+*.jpg
+*.jpeg
+*.png
+*.bmp
+*.gif
+*.mp4
+*.avi
+*.mov
+
+# Machine learning output files
+*.ckpt
+*.pb
+*.tflite
+saved_model/
+__pycache__/
+*.pbtxt
+*.weights
+
+# IDE settings (optional, remove if necessary)
+.vscode/
+.idea/
