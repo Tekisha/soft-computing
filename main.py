@@ -60,6 +60,7 @@ def getToadAndBoo(img, hsv):
     kernel = np.ones((3,3), np.uint8)
     opening = cv2.morphologyEx(img_bin, cv2.MORPH_OPEN, kernel, iterations=2)
     # display_image(opening)
+    sure_bg = cv2.dilate(opening, kernel, iterations=2)
     closing = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernel, iterations=3)
     # display_image(closing)
     sure_bg = cv2.dilate(closing, kernel, iterations=2)
@@ -75,6 +76,8 @@ def getToadAndBoo(img, hsv):
     # display_image(sure_fg)
 
     sure_bg_8bit = np.uint8(sure_fg) 
+    kernel = np.ones((3,3), np.uint8)
+    sure_bg_8bit = cv2.morphologyEx(sure_bg_8bit, cv2.MORPH_CLOSE, kernel, iterations=3)
     # display_image(sure_bg_8bit)
 
     contours, _ = cv2.findContours(sure_bg_8bit, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
@@ -211,7 +214,7 @@ if __name__ == "__main__":
         if filename.endswith(".jpg") or filename.endswith(".png"):
             image_path = os.path.join(args.dataset_folder, filename)
             print(f"Processing {image_path}")
-            # if(image_path == "data\picture_6.png"):
+            # if(image_path == "data\picture_9.png"):
             detected_count = process_image(image_path)
             detected_counts.append(detected_count)
             base_name = os.path.splitext(filename)[0]
