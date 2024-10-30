@@ -56,20 +56,26 @@ def getToadAndBoo(img, hsv):
     # display_image(sure_bg)
 
     img_bin = image_bin(image_gray(img))
-    display_image(img_bin)
+    # display_image(img_bin)
     kernel = np.ones((3,3), np.uint8)
     opening = cv2.morphologyEx(img_bin, cv2.MORPH_OPEN, kernel, iterations=2)
-    display_image(opening)
+    # display_image(opening)
     closing = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernel, iterations=2)
-    display_image(closing)
+    # display_image(closing)
     sure_bg = cv2.dilate(closing, kernel, iterations=2)
-    display_image(sure_bg)
-    dist_transform = cv2.distanceTransform(sure_bg, cv2.DIST_L2, 5)
-    display_image(dist_transform)
-    ret, sure_fg = cv2.threshold(dist_transform, 0.7 * dist_transform.max(), 255, 0) 
-    display_image(sure_fg)
+    # display_image(sure_bg)
+
+    dist_transform = cv2.distanceTransform(sure_bg, cv2.DIST_L2, 3)
+    # display_image(dist_transform)
+    dist_transform_norm = cv2.normalize(dist_transform, None, 0, 255, cv2.NORM_MINMAX)
+    # display_image(dist_transform_norm)
+
+    ret, sure_fg = cv2.threshold(dist_transform, 0.6 * dist_transform.max(), 255, 0) 
+    # sure_fg = np.uint8(sure_fg)
+    # display_image(sure_fg)
 
     sure_bg_8bit = cv2.convertScaleAbs(sure_bg)
+    display_image(sure_bg_8bit)
 
     contours, _ = cv2.findContours(sure_bg_8bit, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     contours_valid = []
@@ -77,12 +83,12 @@ def getToadAndBoo(img, hsv):
     for contour in contours:
         center, size, angle = cv2.minAreaRect(contour)
         width, height = size
-        if width > 10 and width < 100 and height >40 and height < 100:
+        if width > 20 and width < 100 and height >5 and height < 100:
             contours_valid.append(contour)
     
     print(len(contours_valid))
     cv2.drawContours(img, contours_valid, -1, (255,0,0), 1)
-    display_image(img)
+    # display_image(img)
     return len(contours_valid)
     
 
@@ -132,17 +138,38 @@ def removeBackground(img, hsv):
     #display_image(result)
     return result
 
+def removePartialBackground(img, hsv):
+    lower_green = np.array([30,40,40])
+    upper_green = np.array([115,255,255])
+
+    mask = cv2.inRange(hsv, lower_green, upper_green)
+    mask_inv = cv2.bitwise_not(mask)
+    mask_inv[605:, :] = 0
+    mask_inv[:190, :] = 0
+    mask_inv[:, :270] = 0
+    mask_inv[:, 1480:] = 0
+
+    result = cv2.bitwise_and(img, img, mask=mask_inv)
+    # lower_white = np.array([0,0,120])
+    # upper_white = np.array([180, 50, 255])
+    # mask_white = cv2.inRange(hsv, lower_white, upper_white)
+    result = cv2.GaussianBlur(result, (25, 25), 0)
+    # display_image(result)
+    return result
+
 
 def process_image(image_path):
     count = 0
 
     img = load_image(image_path)
+    # display_image(img)
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     #display_image(hsv)
 
+    img_without_partial_background = removePartialBackground(img, hsv)
     img_without_background = removeBackground(img, hsv)
     hsv_without_background = cv2.cvtColor(img_without_background, cv2.COLOR_BGR2HSV)
-    # display_image(img_without_background)
+    display_image(img_without_background)
     count += getToadAndBoo(img_without_background, hsv_without_background)    
     #getBlackBobomb(hsv)
     #getRedBobomb(hsv)
@@ -184,6 +211,7 @@ if __name__ == "__main__":
         if filename.endswith(".jpg") or filename.endswith(".png"):
             image_path = os.path.join(args.dataset_folder, filename)
             print(f"Processing {image_path}")
+            # if(image_path == "data\picture_6.png"):
             detected_count = process_image(image_path)
             detected_counts.append(detected_count)
             base_name = os.path.splitext(filename)[0]
