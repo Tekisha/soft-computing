@@ -40,7 +40,7 @@ def display_image(image, color=False):
         plt.imshow(image, 'gray')
     plt.show()
 
-def getToadAndBoo(img, hsv):
+def getToadAndBoo(img, hsv, bombomb):
     lower_white = np.array([0,0,120])
     upper_white = np.array([180, 50, 255])
     mask_white = cv2.inRange(hsv, lower_white, upper_white)
@@ -56,6 +56,7 @@ def getToadAndBoo(img, hsv):
     # display_image(sure_bg)
 
     img_bin = image_bin(image_gray(img))
+    img_bin = cv2.bitwise_or(img_bin, bombomb)
     # display_image(img_bin)
     kernel = np.ones((3,3), np.uint8)
     opening = cv2.morphologyEx(img_bin, cv2.MORPH_OPEN, kernel, iterations=2)
@@ -97,12 +98,21 @@ def getToadAndBoo(img, hsv):
 
 def getBlackBobomb(hsv):
     lower_black = np.array([0,0,0])
-    upper_black = np.array([180, 100, 80])
+    upper_black = np.array([180, 255, 50])
     mask_black = cv2.inRange(hsv, lower_black, upper_black)
-    kernel = np.ones((3, 3), np.uint8)
-    mask_black = cv2.dilate(mask_black, kernel, iterations=2)
-    mask_black = cv2.erode(mask_black, kernel, iterations=1)
-    display_image(mask_black)
+
+    mask_black[605:, :] = 0
+    mask_black[:190, :] = 0
+    mask_black[:, :270] = 0
+    mask_black[:, 1480:] = 0
+
+    kernel = np.ones((4, 4), np.uint8)
+    mask_black = cv2.morphologyEx(mask_black, cv2.MORPH_OPEN, kernel)
+    mask_black = cv2.morphologyEx(mask_black, cv2.MORPH_CLOSE, kernel)
+    # mask_black = cv2.erode(mask_black, kernel, iterations=2)
+    # mask_black = cv2.dilate(mask_black, kernel, iterations=2)
+    # display_image(mask_black)
+    return mask_black
 
 def getRedBobomb(hsv):
     lower_red_1 = np.array([0, 30, 30])
@@ -116,15 +126,6 @@ def getRedBobomb(hsv):
 
     mask_red = cv2.bitwise_or(mask_red_1, mask_red_2)
     display_image(mask_red)
-
-def getBlueCaps(hsv):
-    lower_blue = np.array([80, 50, 50])
-    upper_blue = np.array([140, 255, 255])
-    mask_blue = cv2.inRange(hsv, lower_blue, upper_blue)
-    kernel = np.ones((3, 3), np.uint8)
-    mask_blue = cv2.morphologyEx(mask_blue, cv2.MORPH_CLOSE, kernel)
-    mask_blue = cv2.morphologyEx(mask_blue, cv2.MORPH_OPEN, kernel)
-    display_image(mask_blue)
 
 def removeBackground(img, hsv):
     lower_green = np.array([11,0,30])
@@ -173,29 +174,10 @@ def process_image(image_path):
     img_without_background = removeBackground(img, hsv)
     hsv_without_background = cv2.cvtColor(img_without_background, cv2.COLOR_BGR2HSV)
     # display_image(img_without_background)
-    count += getToadAndBoo(img_without_background, hsv_without_background)    
-    #getBlackBobomb(hsv)
+    bobomb = getBlackBobomb(hsv)
+    count += getToadAndBoo(img_without_background, hsv_without_background, bobomb)    
     #getRedBobomb(hsv)
     #getBlueCaps(hsv)
-
-    #display_image(hsv_without_background)
-
-    #getToadAndBoo(img, hsv_without_background)
-    # contours, _ = cv2.findContours(mask_inv, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-    # contours_barcode = []
-
-    # for contour in contours:
-    #     for dots in contour:
-    #         x, y = dots[0]
-    #         if y>650:
-    #             continue
-    #         center, size, angle = cv2.minAreaRect(contour)
-    #         height, width = size
-    #         if width > 10 and width < 100 and height >20 and height < 200:
-    #             contours_barcode.append(contour)
-    
-    # cv2.drawContours(img, contours_barcode, -1, (255,0,0), 1)
-    #display_image(img)
 
     return count
 
