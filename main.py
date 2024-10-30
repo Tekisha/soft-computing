@@ -60,7 +60,7 @@ def getToadAndBoo(img, hsv):
     kernel = np.ones((3,3), np.uint8)
     opening = cv2.morphologyEx(img_bin, cv2.MORPH_OPEN, kernel, iterations=2)
     # display_image(opening)
-    closing = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernel, iterations=2)
+    closing = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernel, iterations=3)
     # display_image(closing)
     sure_bg = cv2.dilate(closing, kernel, iterations=2)
     # display_image(sure_bg)
@@ -70,12 +70,12 @@ def getToadAndBoo(img, hsv):
     dist_transform_norm = cv2.normalize(dist_transform, None, 0, 255, cv2.NORM_MINMAX)
     # display_image(dist_transform_norm)
 
-    ret, sure_fg = cv2.threshold(dist_transform, 0.6 * dist_transform.max(), 255, 0) 
+    ret, sure_fg = cv2.threshold(dist_transform_norm, 0.7 * dist_transform.max(), 255, 0) 
     # sure_fg = np.uint8(sure_fg)
     # display_image(sure_fg)
 
-    sure_bg_8bit = cv2.convertScaleAbs(sure_bg)
-    display_image(sure_bg_8bit)
+    sure_bg_8bit = np.uint8(sure_fg) 
+    # display_image(sure_bg_8bit)
 
     contours, _ = cv2.findContours(sure_bg_8bit, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     contours_valid = []
@@ -169,7 +169,7 @@ def process_image(image_path):
     img_without_partial_background = removePartialBackground(img, hsv)
     img_without_background = removeBackground(img, hsv)
     hsv_without_background = cv2.cvtColor(img_without_background, cv2.COLOR_BGR2HSV)
-    display_image(img_without_background)
+    # display_image(img_without_background)
     count += getToadAndBoo(img_without_background, hsv_without_background)    
     #getBlackBobomb(hsv)
     #getRedBobomb(hsv)
