@@ -7,32 +7,32 @@ import pandas as pd
 
 def calculate_mae(predicted_counts, true_counts):
     errors = np.abs(np.array(predicted_counts) - np.array(true_counts))
-    print(true_counts)
-    print(predicted_counts)
-    print(errors)
-    mae = np.mean(errors)
-    return mae
+    # print(true_counts)
+    # print(predicted_counts)
+    # print(errors)
+    return np.mean(errors)
 
 def read_true_counts(csv_path):
     df = pd.read_csv(csv_path)
     true_counts = {os.path.splitext(filename)[0]: count for filename, count in zip(df['picture'], df['toad_boo_bobomb'])}
     return true_counts
 
+#kod sa vjezbi
 def load_image(path):
     return cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2RGB)
 
+#kod sa vjezbi
 def image_gray(image):
     return cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 
+#kod sa vjezbi
 def image_bin(image_gs):
     height, width = image_gs.shape[0:2]
     image_binary = np.ndarray((height, width), dtype=np.uint8)
     ret, image_bin = cv2.threshold(image_gs, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     return image_bin
 
-def invert(image):
-    return 255 - image
-
+#kod sa vjezbi
 def display_image(image, color=False):
     if color:
         plt.imshow(image)
@@ -40,21 +40,7 @@ def display_image(image, color=False):
         plt.imshow(image, 'gray')
     plt.show()
 
-def getToadAndBoo(img, hsv, bombomb):
-    lower_white = np.array([0,0,120])
-    upper_white = np.array([180, 50, 255])
-    mask_white = cv2.inRange(hsv, lower_white, upper_white)
-
-    # display_image(mask_white)
-
-    # kernel = np.ones((3,3), np.uint8)
-    # opening = cv2.morphologyEx(mask_white, cv2.MORPH_OPEN, kernel, iterations=2)
-    # display_image(opening)
-    # closing = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernel, iterations=1)
-    # display_image(closing)
-    # sure_bg = cv2.dilate(closing, kernel, iterations=3)
-    # display_image(sure_bg)
-
+def getToadAndBoo(img, bombomb):
     img_bin = image_bin(image_gray(img))
     img_bin = cv2.bitwise_or(img_bin, bombomb)
     # display_image(img_bin)
@@ -73,15 +59,14 @@ def getToadAndBoo(img, hsv, bombomb):
     # display_image(dist_transform_norm)
 
     ret, sure_fg = cv2.threshold(dist_transform_norm, 0.7 * dist_transform.max(), 255, 0) 
-    # sure_fg = np.uint8(sure_fg)
     # display_image(sure_fg)
 
-    sure_bg_8bit = np.uint8(sure_fg) 
+    sure_fg_8bit = np.uint8(sure_fg) 
     kernel = np.ones((3,3), np.uint8)
-    sure_bg_8bit = cv2.morphologyEx(sure_bg_8bit, cv2.MORPH_CLOSE, kernel, iterations=3)
+    sure_fg_8bit = cv2.morphologyEx(sure_fg_8bit, cv2.MORPH_CLOSE, kernel, iterations=3)
     # display_image(sure_bg_8bit)
 
-    contours, _ = cv2.findContours(sure_bg_8bit, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(sure_fg_8bit, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     contours_valid = []
 
     for contour in contours:
@@ -90,12 +75,12 @@ def getToadAndBoo(img, hsv, bombomb):
         if width > 20 and width < 100 and height >5 and height < 100:
             contours_valid.append(contour)
     
-    print(len(contours_valid))
+    # print(len(contours_valid))
     cv2.drawContours(img, contours_valid, -1, (255,0,0), 1)
     # display_image(img)
     return len(contours_valid)
     
-
+#izoluje samo crne piksele i njih dodaje u sliku bez pozadine
 def getBlackBobomb(hsv):
     lower_black = np.array([0,0,0])
     upper_black = np.array([180, 255, 50])
@@ -109,24 +94,9 @@ def getBlackBobomb(hsv):
     kernel = np.ones((4, 4), np.uint8)
     mask_black = cv2.morphologyEx(mask_black, cv2.MORPH_OPEN, kernel)
     mask_black = cv2.morphologyEx(mask_black, cv2.MORPH_CLOSE, kernel)
-    # mask_black = cv2.erode(mask_black, kernel, iterations=2)
-    # mask_black = cv2.dilate(mask_black, kernel, iterations=2)
-    # display_image(mask_black)
     return mask_black
 
-def getRedBobomb(hsv):
-    lower_red_1 = np.array([0, 30, 30])
-    upper_red_1 = np.array([15, 255, 255])
-
-    lower_red_2 = np.array([165, 30, 30])
-    upper_red_2 = np.array([180, 255, 255])
-
-    mask_red_1 = cv2.inRange(hsv, lower_red_1, upper_red_1)
-    mask_red_2 = cv2.inRange(hsv, lower_red_2, upper_red_2)
-
-    mask_red = cv2.bitwise_or(mask_red_1, mask_red_2)
-    display_image(mask_red)
-
+#uklanja pozadinu (problem je sto uklanja i crne bombe - getBlackBobomb to rjesava)
 def removeBackground(img, hsv):
     lower_green = np.array([11,0,30])
     upper_green = np.array([115,255,255])
@@ -142,44 +112,18 @@ def removeBackground(img, hsv):
     #display_image(result)
     return result
 
-def removePartialBackground(img, hsv):
-    lower_green = np.array([30,40,40])
-    upper_green = np.array([115,255,255])
-
-    mask = cv2.inRange(hsv, lower_green, upper_green)
-    mask_inv = cv2.bitwise_not(mask)
-    mask_inv[605:, :] = 0
-    mask_inv[:190, :] = 0
-    mask_inv[:, :270] = 0
-    mask_inv[:, 1480:] = 0
-
-    result = cv2.bitwise_and(img, img, mask=mask_inv)
-    # lower_white = np.array([0,0,120])
-    # upper_white = np.array([180, 50, 255])
-    # mask_white = cv2.inRange(hsv, lower_white, upper_white)
-    result = cv2.GaussianBlur(result, (25, 25), 0)
-    # display_image(result)
-    return result
-
-
+#glavna funkcija za obradu slike
 def process_image(image_path):
-    count = 0
-
     img = load_image(image_path)
     # display_image(img)
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     #display_image(hsv)
 
-    img_without_partial_background = removePartialBackground(img, hsv)
     img_without_background = removeBackground(img, hsv)
-    hsv_without_background = cv2.cvtColor(img_without_background, cv2.COLOR_BGR2HSV)
     # display_image(img_without_background)
     bobomb = getBlackBobomb(hsv)
-    count += getToadAndBoo(img_without_background, hsv_without_background, bobomb)    
-    #getRedBobomb(hsv)
-    #getBlueCaps(hsv)
-
-    return count
+    # display_image(bobomb)
+    return getToadAndBoo(img_without_background, bobomb)    
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process images from a dataset folder.')
@@ -195,8 +139,7 @@ if __name__ == "__main__":
     for filename in os.listdir(args.dataset_folder):
         if filename.endswith(".jpg") or filename.endswith(".png"):
             image_path = os.path.join(args.dataset_folder, filename)
-            print(f"Processing {image_path}")
-            # if(image_path == "data\picture_9.png"):
+            # print(f"Processing {image_path}")
             detected_count = process_image(image_path)
             detected_counts.append(detected_count)
             base_name = os.path.splitext(filename)[0]
@@ -204,4 +147,5 @@ if __name__ == "__main__":
             true_counts_list.append(true_count)
     
     mae = calculate_mae(detected_counts, true_counts_list)
-    print(f"Mean Absolute Error (MAE): {mae}")
+    # print(f"Mean Absolute Error (MAE): {mae}")
+    print(mae)
